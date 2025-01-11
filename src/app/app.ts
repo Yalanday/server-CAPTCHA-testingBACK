@@ -2,6 +2,7 @@ import express, {NextFunction, Request, Response} from "express";
 import cors from "cors";
 import {connectToDB} from "../db/db";
 import {Routes} from "../types/types";
+import session from "express-session";
 
 export class AppClass {
     app: express.Application;
@@ -9,6 +10,17 @@ export class AppClass {
 
     constructor(port: number, corsOptions: cors.CorsOptions) {
         this.app = express();
+        this.app.use(session({
+            secret: 'your-secret-key',
+            resave: false,
+            saveUninitialized: true,
+            cookie: {
+                httpOnly: true,
+                secure: false, // Установите на true, если работаете в production с HTTPS
+                sameSite: true, // Для разрешения cookies при кросс-доменном обмене
+                maxAge: 3600000,  // 1 час
+            }
+        }));
         this.initializeMiddleware();
         this.setConfigCors(corsOptions);
         this.PORT = process.env.PORT || port;

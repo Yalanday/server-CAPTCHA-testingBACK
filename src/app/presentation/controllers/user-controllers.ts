@@ -44,3 +44,4 @@ export const loginUser = async (req: Request<{}, {}, UserRequestBody>, res: Resp
         res.status(500).json({message: 'Failed to add user', typeErr: error.message});
     }
 }
+
