@@ -7,7 +7,6 @@ import session from "express-session";
 export class AppClass {
     app: express.Application;
     PORT: number | string;
-
     constructor(port: number, corsOptions: cors.CorsOptions) {
         this.app = express();
         this.app.use(session({
@@ -25,13 +24,9 @@ export class AppClass {
         this.setConfigCors(corsOptions);
         this.PORT = process.env.PORT || port;
     }
-
     // Метод для настройки middleware
     private initializeMiddleware = () => this.app.use(express.json());
-
     private setConfigCors = (configurations: cors.CorsOptions) => this.app.use(cors(configurations));
-
-
 // Метод для запуска сервера
     startServer = async () => {
         try {

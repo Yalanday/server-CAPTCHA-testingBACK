@@ -2,18 +2,21 @@
 import {ResultSetHeader, RowDataPacket} from "mysql2";  // Подключаем актуальные типы
 import {Connection} from "mysql2/promise";
 import {connectToDB} from "../../db/db";
-
-
+import {hashPassword, isPasswordCorrect} from "./repo-helpers";
 
 export const addUserToDB = async (email: string, password: string): Promise<number> => {
     let connection: Connection;
+
+    console.log('ORIGINAL', password)
+    password = await hashPassword(password);
+    console.log('NEW', password)
 
     try {
         connection = await connectToDB();
         const [result] = await connection.execute<ResultSetHeader>('INSERT INTO users (email, password) VALUES (?, ?)', [email, password]);
         return result.insertId;
     } catch (error) {
-        if(error.errno && error.errno === 1062) {
+        if (error.errno && error.errno === 1062) {
             error.message = "Пользователь с таким email уже существует"
         }
         throw error;
@@ -63,8 +66,9 @@ export const loginUserBD = async (email: string, password: string): Promise<numb
         // Получаем данные пользователя
         const user = rows[0];
 
-        // Сравниваем введенный пароль с тем, что хранится в базе данных
-        if (password !== user.password) {
+        const passwordMatch = await isPasswordCorrect(password, user.password);
+
+        if (!passwordMatch) {
             throw new Error('Неверный пароль');
         }
 

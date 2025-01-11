@@ -5,5 +5,8 @@ import { SessionData } from 'express-session';
 declare module 'express-session' {
     interface SessionData {
         captchaText: string;  // Добавляем свойство captchaText
+        sessionEmail: string;
+        sessionPassword: string;
+        isInLogin?: boolean
     }
 }
