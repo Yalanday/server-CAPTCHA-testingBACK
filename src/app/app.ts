@@ -15,19 +15,19 @@ export class AppClass {
             saveUninitialized: true,
             cookie: {
                 httpOnly: true,
-                secure: false, // Установите на true, если работаете в production с HTTPS
-                sameSite: true, // Для разрешения cookies при кросс-доменном обмене
-                maxAge: 3600000,  // 1 час
+                secure: false,
+                sameSite: 'none',
+                maxAge: 3600000,
             }
         }));
         this.initializeMiddleware();
         this.setConfigCors(corsOptions);
         this.PORT = process.env.PORT || port;
     }
-    // Метод для настройки middleware
+
     private initializeMiddleware = () => this.app.use(express.json());
     private setConfigCors = (configurations: cors.CorsOptions) => this.app.use(cors(configurations));
-// Метод для запуска сервера
+
     startServer = async () => {
         try {
             await connectToDB();
@@ -36,14 +36,13 @@ export class AppClass {
                 console.log(`Server is running on port ${this.PORT}`);
             });
 
-            // Обработчик ошибок - добавляем после запуска сервера
             this.app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
                 res.status(500).json({message: 'Something went wrong', error: err.message});
             });
 
         } catch (error) {
             console.error('Error starting server:', error);
-            process.exit(1);  // Завершаем процесс с кодом ошибки
+            process.exit(1);
         }
     };
 
