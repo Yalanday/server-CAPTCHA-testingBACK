@@ -1,4 +1,4 @@
-import {Validation} from "../src/business/business-helpers/validation";
+import {Validation} from "../src/app/business/business-helpers/validation";
 
 
 describe('Validation: ', () => {

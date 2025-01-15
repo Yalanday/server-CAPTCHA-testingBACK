@@ -31,24 +31,6 @@ export const addUserToDB = async (email: string, password: string): Promise<numb
     }
 }
 
-export const updateUserData = async (id: string, email: string): Promise<void> => {
-    let connection: Connection;
-
-    try {
-        connection = await connectToDB();
-        await connection.execute<ResultSetHeader>('UPDATE users SET email = ? WHERE id = ?', [email, id]);
-    } catch (error) {
-        throw error;
-    } finally {
-        if (connection) {
-            try {
-                await connection.end();
-            } catch (closeError) {
-                console.error('❌ Error closing connection:', closeError);
-            }
-        }
-    }
-}
 
 export const loginUserBD = async (email: string, password: string): Promise<number> => {
     let connection: Connection;

@@ -11,3 +11,8 @@ export interface UserRequestBody {
     email: string;
     password: string;
 }
+
+export type Captcha = {
+    data: string;
+    text: string;
+}

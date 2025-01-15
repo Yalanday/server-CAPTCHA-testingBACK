@@ -1,11 +1,8 @@
 import svgCaptcha from 'svg-captcha';
 import fs from 'fs';
+import {Captcha} from "../types/types";
 
-// Определите типы для объекта captcha
-export type Captcha = {
-    data: string;
-    text: string;
-}
+
 
 // Функция для генерации капчи и сохранения в файл
 export const generateCaptcha = (): Captcha => {

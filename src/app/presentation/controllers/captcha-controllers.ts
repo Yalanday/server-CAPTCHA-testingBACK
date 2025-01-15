@@ -1,87 +1,83 @@
 import {Request, Response} from 'express';
 import {NextFunction} from "express";
-import {Captcha, generateCaptcha} from "../../generateCaptcha";
+import {generateCaptcha} from "../../generateCaptcha";
 import {addUserToDB, loginUserBD} from "../../repositories/userRepositories";
 import {generateToken} from "../presentation-helpers/generate-token";
+import jwt from 'jsonwebtoken';
+import type {Captcha} from "../../../types/types";
 
-export const sessionDataAfter = {
-    sessionCaptchaText: '',
-     sessionCaptchaEmail: '',
-    sessionCaptchaPassword: '',
-    isRegister: false
-}
+
+const tempStorage = new Map();
 
 export const getCaptcha = async (req: Request, res: Response, next: NextFunction): Promise<boolean> => {
     const captcha: Captcha = generateCaptcha();
-    req.session.captchaText = captcha.text;  // Сохраняем текст капчи в сессии
-    sessionDataAfter.sessionCaptchaText = captcha.text;
-    try {
-        await new Promise<void>((resolve, reject) => {
-            req.session.save((err) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        });
-    } catch (err) {
-        console.error('Ошибка сохранения сессии:', err);
-        return false;
-    }
+    const secretKey = 'your_jwt_secret_key';
+    const tokenExpiration = '5m';
+
+    const intermediateToken = jwt.sign(
+        { email: req.body.email, captchaText: captcha.text, isInLogin: req.body.isInLogin },
+        secretKey,
+        { expiresIn: tokenExpiration }
+    );
+
+    tempStorage.set(req.body.email, { password: req.body.password, token: intermediateToken });
 
     res.type('svg');
-    res.status(200).send(captcha.data);
+    res.status(200).json({
+        captchaSvg: captcha.data,
+        token: intermediateToken,
+        expiresIn: tokenExpiration,
+    });
     return true;
-}
+};
 
+export const postCaptcha = async (req, res) => {
+    const userCaptchaText = req.body.captchaText;
+    const authHeader = req.headers.authorization;
 
-export const postCaptcha = async (req: Request, res: Response, next: NextFunction): Promise<boolean> => {
-    const userCaptchaText = req.body.captchaText; // Получаем текст капчи от пользователя
-
-    console.log(userCaptchaText)
-
-    console.log(sessionDataAfter)
-
-
-    let correctCaptchaText = req.session.captchaText; // Получаем правильный текст из сессии
-
-    if (correctCaptchaText === undefined) {
-        console.log('меняем каптчу')
-        correctCaptchaText = sessionDataAfter.sessionCaptchaText;
-        req.session.sessionEmail = sessionDataAfter.sessionCaptchaEmail;
-        req.session.sessionPassword = sessionDataAfter.sessionCaptchaPassword;
-        sessionDataAfter.isRegister ? req.session.isInLogin = false: req.session.isInLogin = true;
+    if (!authHeader) {
+        return res.status(401).json({ success: false, message: 'Токен отсутствует' });
     }
 
-    console.log('Это сохраненная каптча', sessionDataAfter.sessionCaptchaText)
-    console.log('Это сохрвненный емайлю' , req.session.sessionEmail)
-    console.log('Это сохраненный пароль' , req.session.sessionPassword)
-    console.log('Это вход в систему' , req.session.isInLogin)
+    const token = authHeader.split(' ')[1];
+    let decodedToken;
 
-    console.log('это userCaptchaText',  userCaptchaText)
-    console.log('это correctCaptchaText',  correctCaptchaText)
+    try {
+        decodedToken = jwt.verify(token, 'your_jwt_secret_key');
+    } catch (err) {
+        return res.status(401).json({ success: false, message: 'Неверный или истекший токен' });
+    }
 
-    // Сравниваем тексты
+    console.log(decodedToken.isInLogin)
+
+    const correctCaptchaText = decodedToken.captchaText;
+
     if (userCaptchaText === correctCaptchaText) {
-        let userId: number;
+        let userId;
 
-        console.log('1:', userCaptchaText === correctCaptchaText)
+        const storedData = tempStorage.get(decodedToken.email);
 
-        if (req.session.isInLogin) {
-            console.log('ЕБАНЫЙ ЛОГИН')
-            userId = await loginUserBD(req.session.sessionEmail, req.session.sessionPassword)
-            req.session.isInLogin = false;
-        } else {
-            console.log('хуева рега')
-            userId = await addUserToDB(req.session.sessionEmail, req.session.sessionPassword);
+        if (!storedData) {
+            return res.status(401).json({ success: false, message: 'Данные не найдены в хранилище' });
         }
 
-        const token = generateToken(userId, req.session.sessionEmail);
-        res.status(201).json({message: 'Каптча корректна', userId, token});
-        return true
+        const password = storedData.password;
+
+        if (decodedToken.isInLogin) {
+            userId = await loginUserBD(decodedToken.email, password);
+        } else {
+            userId = await addUserToDB(decodedToken.email, password);
+        }
+
+        const newToken = generateToken(userId, decodedToken.email);
+        res.status(201).json({
+            message: 'Каптча корректна',
+            userId,
+            token: newToken,
+        });
+        return true;
     } else {
-        res.status(400).json({success: false, message: 'Captcha is incorrect'});
-        return false
+        res.status(400).json({ success: false, message: 'Captcha is incorrect' });
+        return false;
     }
 };

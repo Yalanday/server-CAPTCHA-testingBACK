@@ -2,24 +2,12 @@ import express, {NextFunction, Request, Response} from "express";
 import cors from "cors";
 import {connectToDB} from "../db/db";
 import {Routes} from "../types/types";
-import session from "express-session";
 
 export class AppClass {
     app: express.Application;
     PORT: number | string;
     constructor(port: number, corsOptions: cors.CorsOptions) {
         this.app = express();
-        this.app.use(session({
-            secret: 'your-secret-key',
-            resave: false,
-            saveUninitialized: true,
-            cookie: {
-                httpOnly: true,
-                secure: false,
-                sameSite: 'none',
-                maxAge: 3600000,
-            }
-        }));
         this.initializeMiddleware();
         this.setConfigCors(corsOptions);
         this.PORT = process.env.PORT || port;
